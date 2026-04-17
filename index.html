@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Điều Khiển ESP32</title>
+    <style>
+        /* Bước 2: Thêm "lớp áo" (CSS) */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 300px;
+        }
+        h1 { color: #1a73e8; font-size: 20px; }
+        .status { margin-bottom: 20px; font-weight: bold; }
+        .btn {
+            background-color: #34a853;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        .btn:hover { background-color: #2d8e47; }
+        .btn.off { background-color: #ea4335; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>Bảng Điều Khiển LED</h1>
+        <div class="status">Trạng thái: <span id="state">TẮT</span></div>
+        <button id="toggleBtn" class="btn" onclick="toggleLED()">BẬT ĐÈN</button>
+    </div>
+
+    <script>
+        let isOn = false;
+        const stateText = document.getElementById('state');
+        const btn = document.getElementById('toggleBtn');
+
+        function toggleLED() {
+            isOn = !isOn; // Đảo trạng thái
+            if (isOn) {
+                stateText.innerText = "ĐANG BẬT";
+                stateText.style.color = "#34a853";
+                btn.innerText = "TẮT ĐÈN";
+                btn.classList.add('off');
+                console.log("Gửi lệnh: ON tới ESP32...");
+            } else {
+                stateText.innerText = "TẮT";
+                stateText.style.color = "#ea4335";
+                btn.innerText = "BẬT ĐÈN";
+                btn.classList.remove('off');
+                console.log("Gửi lệnh: OFF tới ESP32...");
+            }
+        }
+    </script>
+</body>
+</html>
