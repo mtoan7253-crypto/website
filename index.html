@@ -1,148 +1,82 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Giám Sát IoT - DTVT</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Game Xếp Hình Đơn Giản</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #121212; /* Màu tối cho chuyên nghiệp */
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            margin: 0;
-        }
-        .container {
-            width: 100%;
-            max-width: 500px;
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            text-align: center;
-        }
-        h1 { color: #00e676; font-size: 22px; margin-bottom: 25px; }
-        
-        /* Khu vực hiển thị thông số */
-        .monitor-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        .data-card {
-            background: #2c2c2c;
-            padding: 15px;
-            border-radius: 15px;
-            border-bottom: 4px solid #00e676;
-        }
-        .label { font-size: 12px; color: #aaa; text-transform: uppercase; }
-        .value { font-size: 28px; font-weight: bold; margin-top: 5px; }
-
-        /* Nút bấm */
-        .btn {
-            width: 100%;
-            padding: 15px;
-            border-radius: 12px;
-            border: none;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-            background: #00e676;
-            color: #121212;
-            margin-bottom: 20px;
-        }
-        .btn.off { background: #ff5252; }
-
-        /* Khu vực biểu đồ */
-        canvas {
-            margin-top: 10px;
-            background: #2c2c2c;
-            border-radius: 10px;
-            padding: 10px;
-        }
+        body { background: #202028; color: #fff; font-family: sans-serif; text-align: center; }
+        canvas { border: solid 2px #fff; background-color: #000; height: 80vh; }
+        .score { font-size: 30px; }
     </style>
 </head>
 <body>
-
-    <div class="container">
-        <h1>BẢNG ĐIỀU KHIỂN THIẾT BỊ</h1>
-
-        <div class="monitor-grid">
-            <div class="data-card">
-                <div class="label">Nhiệt độ</div>
-                <div id="tempVal" class="value" style="color: #ff5252;">25.0°C</div>
-            </div>
-            <div class="data-card">
-                <div class="label">Độ ẩm</div>
-                <div id="humiVal" class="value" style="color: #40c4ff;">60%</div>
-            </div>
-        </div>
-
-        <button id="mainBtn" class="btn" onclick="handleToggle()">BẬT THIẾT BỊ</button>
-
-        <canvas id="iotChart"></canvas>
-    </div>
+    <div class="score" id="score">Điểm: 0</div>
+    <canvas id="tetris" width="240" height="400"></canvas>
 
     <script>
-        // 1. Xử lý Nút bấm
-        let deviceState = false;
-        function handleToggle() {
-            deviceState = !deviceState;
-            const btn = document.getElementById('mainBtn');
-            if(deviceState) {
-                btn.innerText = "TẮT THIẾT BỊ";
-                btn.classList.add('off');
-                console.log("Đã gửi lệnh ON");
-            } else {
-                btn.innerText = "BẬT THIẾT BỊ";
-                btn.classList.remove('off');
-                console.log("Đã gửi lệnh OFF");
-            }
+        const canvas = document.getElementById('tetris');
+        const context = canvas.getContext('2d');
+        context.scale(20, 20);
+
+        // Tạo bảng game (12x20)
+        function createMatrix(w, h) {
+            const matrix = [];
+            while (h--) { matrix.push(new Array(w).fill(0)); }
+            return matrix;
         }
 
-        // 2. Khởi tạo Biểu đồ
-        const ctx = document.getElementById('iotChart').getContext('2d');
-        const dataHistory = [25, 26, 24, 25, 27, 26, 28]; // Dữ liệu ảo ban đầu
-        const iotChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['1s', '2s', '3s', '4s', '5s', '6s', '7s'],
-                datasets: [{
-                    label: 'Lịch sử Nhiệt độ',
-                    data: dataHistory,
-                    borderColor: '#00e676',
-                    tension: 0.4,
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { labels: { color: 'white' } } },
-                scales: { y: { ticks: { color: 'white' } }, x: { ticks: { color: 'white' } } }
+        // Vẽ các khối gạch
+        function drawMatrix(matrix, offset) {
+            matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        context.fillStyle = 'red';
+                        context.fillRect(x + offset.x, y + offset.y, 1, 1);
+                    }
+                });
+            });
+        }
+
+        // Khối gạch hình chữ T đơn giản
+        const player = {
+            pos: {x: 5, y: 0},
+            matrix: [
+                [0, 1, 0],
+                [1, 1, 1],
+                [0, 0, 0],
+            ],
+        };
+
+        const arena = createMatrix(12, 20);
+
+        function draw() {
+            context.fillStyle = '#000';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            drawMatrix(arena, {x: 0, y: 0});
+            drawMatrix(player.matrix, player.pos);
+        }
+
+        let dropCounter = 0;
+        let lastTime = 0;
+        function update(time = 0) {
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+            if (dropCounter > 1000) {
+                player.pos.y++;
+                dropCounter = 0;
             }
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        // Điều khiển bằng phím mũi tên
+        document.addEventListener('keydown', event => {
+            if (event.keyCode === 37) player.pos.x--; // Trái
+            else if (event.keyCode === 39) player.pos.x++; // Phải
+            else if (event.keyCode === 40) player.pos.y++; // Xuống
         });
 
-        // 3. Giả lập dữ liệu cập nhật liên tục (Real-time)
-        setInterval(() => {
-            // Tạo số ngẫu nhiên
-            const newTemp = (24 + Math.random() * 5).toFixed(1);
-            const newHumi = (55 + Math.random() * 10).toFixed(0);
-
-            // Cập nhật số hiển thị
-            document.getElementById('tempVal').innerText = newTemp + "°C";
-            document.getElementById('humiVal').innerText = newHumi + "%";
-
-            // Cập nhật biểu đồ
-            iotChart.data.datasets[0].data.push(newTemp);
-            iotChart.data.datasets[0].data.shift(); // Xóa điểm cũ nhất
-            iotChart.update();
-        }, 3000); // Cập nhật mỗi 3 giây
+        update();
     </script>
 </body>
 </html>
