@@ -1,82 +1,167 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-    <title>Game Xếp Hình Đơn Giản</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mật Thư Studio - Substitution Cipher Solver</title>
     <style>
-        body { background: #202028; color: #fff; font-family: sans-serif; text-align: center; }
-        canvas { border: solid 2px #fff; background-color: #000; height: 80vh; }
-        .score { font-size: 30px; }
+        /* PHẦN 1: CSS - GIAO DIỆN (KHOẢNG 100 DÒNG) */
+        :root { --primary: #00ff41; --bg: #0d0208; --card: #151515; }
+        body { background: var(--bg); color: var(--primary); font-family: 'Courier New', Courier, monospace; padding: 20px; line-height: 1.6; }
+        .container { max-width: 900px; margin: auto; }
+        header { text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        textarea { width: 100%; height: 150px; background: #000; color: var(--primary); border: 1px solid var(--primary); padding: 10px; box-sizing: border-box; font-size: 16px; }
+        .control-panel { background: var(--card); padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .key-input { letter-spacing: 5px; text-transform: uppercase; text-align: center; font-weight: bold; font-size: 20px; }
+        .stats-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        .stats-table th, .stats-table td { border: 1px solid #333; padding: 5px; text-align: center; }
+        .btn { background: var(--primary); color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        .btn:hover { background: #00cc33; }
+        .highlight { color: #fff; background: #333; padding: 0 5px; }
+        .tool-tip { font-size: 12px; color: #888; margin-top: 5px; }
+        /* Responsive */
+        @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <div class="score" id="score">Điểm: 0</div>
-    <canvas id="tetris" width="240" height="400"></canvas>
 
-    <script>
-        const canvas = document.getElementById('tetris');
-        const context = canvas.getContext('2d');
-        context.scale(20, 20);
+<div class="container">
+    <header>
+        <h1>MATRIX MẬT THƯ v1.0</h1>
+        <p>Hệ thống giải mật thư thay thế chuyên dụng cho DTVT</p>
+    </header>
 
-        // Tạo bảng game (12x20)
-        function createMatrix(w, h) {
-            const matrix = [];
-            while (h--) { matrix.push(new Array(w).fill(0)); }
-            return matrix;
+    <div class="grid">
+        <div class="card">
+            <h3>Bản Mã (Ciphertext)</h3>
+            <textarea id="cipherInput" placeholder="Nhập mật thư cần giải vào đây..."></textarea>
+            <div class="tool-tip">Gợi ý: Nhập đoạn văn bản đã bị thay thế ký tự.</div>
+        </div>
+
+        <div class="card">
+            <h3>Bản Rõ (Plaintext)</h3>
+            <textarea id="plainOutput" readonly placeholder="Kết quả giải mã sẽ hiện ở đây..."></textarea>
+            <button class="btn" onclick="copyResult()">SAO CHÉP KẾT QUẢ</button>
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <h3>BẢNG THAY THẾ (KEY)</h3>
+        <p>A B C D E F G H I J K L M N O P Q R S T U V W X Y Z</p>
+        <input type="text" id="keyMap" class="textarea key-input" value="ABCDEFGHIJKLMNOPQRSTUVWXYZ" maxlength="26">
+        <div class="tool-tip">Thay đổi thứ tự các chữ cái ở trên để giải mã.</div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button class="btn" onclick="randomizeKey()">NGẪU NHIÊN KEY</button>
+            <button class="btn" style="background: #555;" onclick="resetKey()">RESET</button>
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <h3>PHÂN TÍCH TẦN SUẤT (FREQUENCY ANALYSIS)</h3>
+        <p>Dựa trên quy luật ngôn ngữ để đoán chữ cái.</p>
+        <div id="statsContainer">
+            <table class="stats-table" id="freqTable">
+                <thead><tr id="freqHeader"></tr></thead>
+                <tbody><tr id="freqBody"></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+/* PHẦN 2: JAVASCRIPT - LOGIC XỬ LÝ (KHOẢNG 300 DÒNG) */
+
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const cipherInput = document.getElementById('cipherInput');
+const plainOutput = document.getElementById('plainOutput');
+const keyMapInput = document.getElementById('keyMap');
+
+// 1. Hàm giải mã chính
+function decrypt() {
+    const text = cipherInput.value.toUpperCase();
+    const key = keyMapInput.value.toUpperCase();
+    
+    if (key.length !== 26) return;
+
+    let result = "";
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const index = ALPHABET.indexOf(char);
+        
+        if (index !== -1) {
+            // Thay thế ký tự dựa trên vị trí trong Key
+            result += key[index];
+        } else {
+            result += char; // Giữ nguyên khoảng trắng, dấu câu
         }
+    }
+    plainOutput.value = result;
+    analyzeFrequency(text);
+}
 
-        // Vẽ các khối gạch
-        function drawMatrix(matrix, offset) {
-            matrix.forEach((row, y) => {
-                row.forEach((value, x) => {
-                    if (value !== 0) {
-                        context.fillStyle = 'red';
-                        context.fillRect(x + offset.x, y + offset.y, 1, 1);
-                    }
-                });
-            });
+// 2. Phân tích tần suất chữ cái
+function analyzeFrequency(text) {
+    const freq = {};
+    let total = 0;
+    
+    // Đếm
+    for (let char of text) {
+        if (ALPHABET.includes(char)) {
+            freq[char] = (freq[char] || 0) + 1;
+            total++;
         }
+    }
 
-        // Khối gạch hình chữ T đơn giản
-        const player = {
-            pos: {x: 5, y: 0},
-            matrix: [
-                [0, 1, 0],
-                [1, 1, 1],
-                [0, 0, 0],
-            ],
-        };
+    // Sắp xếp và hiển thị
+    const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+    const header = document.getElementById('freqHeader');
+    const body = document.getElementById('freqBody');
+    
+    header.innerHTML = "";
+    body.innerHTML = "";
 
-        const arena = createMatrix(12, 20);
+    sorted.slice(0, 13).forEach(([char, count]) => {
+        const percent = ((count / total) * 100).toFixed(1);
+        header.innerHTML += `<th>${char}</th>`;
+        body.innerHTML += `<td>${percent}%</td>`;
+    });
+}
 
-        function draw() {
-            context.fillStyle = '#000';
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            drawMatrix(arena, {x: 0, y: 0});
-            drawMatrix(player.matrix, player.pos);
-        }
+// 3. Các tiện ích bổ trợ
+function randomizeKey() {
+    let a = ALPHABET.split(""), n = a.length;
+    for(let i = n - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    keyMapInput.value = a.join("");
+    decrypt();
+}
 
-        let dropCounter = 0;
-        let lastTime = 0;
-        function update(time = 0) {
-            const deltaTime = time - lastTime;
-            lastTime = time;
-            dropCounter += deltaTime;
-            if (dropCounter > 1000) {
-                player.pos.y++;
-                dropCounter = 0;
-            }
-            draw();
-            requestAnimationFrame(update);
-        }
+function resetKey() {
+    keyMapInput.value = ALPHABET;
+    decrypt();
+}
 
-        // Điều khiển bằng phím mũi tên
-        document.addEventListener('keydown', event => {
-            if (event.keyCode === 37) player.pos.x--; // Trái
-            else if (event.keyCode === 39) player.pos.x++; // Phải
-            else if (event.keyCode === 40) player.pos.y++; // Xuống
-        });
+function copyResult() {
+    plainOutput.select();
+    document.execCommand("copy");
+    alert("Đã sao chép bản rõ!");
+}
 
-        update();
-    </script>
+// 4. Lắng nghe sự kiện người dùng
+cipherInput.addEventListener('input', decrypt);
+keyMapInput.addEventListener('input', () => {
+    // Chỉ cho phép nhập chữ cái và tự động in hoa
+    keyMapInput.value = keyMapInput.value.toUpperCase().replace(/[^A-Z]/g, "");
+    decrypt();
+});
+
+// Khởi tạo lần đầu
+decrypt();
+
+</script>
 </body>
 </html>
